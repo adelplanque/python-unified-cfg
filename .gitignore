@@ -1,0 +1,6 @@
+*.Po
+*.egg-info
+*.so
+*~
+/build
+/dist

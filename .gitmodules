@@ -1,0 +1,6 @@
+[submodule "ext/pybind11-2.9.2"]
+	path = ext/pybind11-2.9.2
+	url = https://github.com/pybind/pybind11.git
+[submodule "ext/pybind11-2.10.4"]
+	path = ext/pybind11-2.10.4
+	url = https://github.com/pybind/pybind11.git

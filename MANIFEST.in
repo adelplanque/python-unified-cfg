@@ -1,0 +1,5 @@
+recursive-include ext/pybind11-*/include *
+include ext/pybind11-*/LICENSE
+include ext/pybind11-*/README.rst
+include version-script-py2
+include version-script-py3
