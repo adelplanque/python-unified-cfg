@@ -115,10 +115,14 @@ class Cast
 public:
     Cast(settings_t::ptr settings) : settings(settings) {}
 
-    T call(const std::string& key)
+    py::object call(const std::string& key, bool no_raise)
     {
         try {
-            return settings->at(key)->as<T>();
+            return py::int_(settings->at(key)->as<T>());
+        }
+        catch (const std::out_of_range& e) {
+            if (no_raise) return py::none();
+            else throw e;
         }
         catch (boost::bad_lexical_cast&) {
             std::ostringstream oss;
@@ -165,10 +169,10 @@ PYBIND11_MODULE(_cfg, m) {
     m.doc() = "";
 
     py::class_<Cast<int>>(m, "_cast_int")
-        .def("__call__", &Cast<int>::call, py::arg("key"));
+        .def("__call__", &Cast<int>::call, py::arg("key"), py::arg("no_raise") = false);
 
     py::class_<Cast<bool>>(m, "_cast_bool")
-        .def("__call__", &Cast<bool>::call, py::arg("key"));
+        .def("__call__", &Cast<bool>::call, py::arg("key"), py::arg("no_raise") = false);
 
     py::class_<SettingsKeyIterator, std::unique_ptr<SettingsKeyIterator>>
         (m, "_settings_keys")
@@ -233,7 +237,7 @@ PYBIND11_MODULE(_cfg, m) {
              },
              py::arg("key"), py::arg("default") = py::none())
         .def_property_readonly("as_int", [](settings_t& self) {
-            return Cast<int>(self.shared_from_this());
+                return Cast<int>(self.shared_from_this());
         })
         .def_property_readonly("as_bool", [](settings_t& self) {
             return Cast<bool>(self.shared_from_this());
