@@ -168,8 +168,8 @@ std::list<std::string> get_config_path()
 PYBIND11_MODULE(_cfg, m) {
     m.doc() = "";
 
-    py::class_<Cast<int>>(m, "_cast_int")
-        .def("__call__", &Cast<int>::call, py::arg("key"), py::arg("no_raise") = false);
+    py::class_<Cast<long>>(m, "_cast_int")
+        .def("__call__", &Cast<long>::call, py::arg("key"), py::arg("no_raise") = false);
 
     py::class_<Cast<bool>>(m, "_cast_bool")
         .def("__call__", &Cast<bool>::call, py::arg("key"), py::arg("no_raise") = false);
@@ -237,7 +237,7 @@ PYBIND11_MODULE(_cfg, m) {
              },
              py::arg("key"), py::arg("default") = py::none())
         .def_property_readonly("as_int", [](settings_t& self) {
-                return Cast<int>(self.shared_from_this());
+                return Cast<long>(self.shared_from_this());
         })
         .def_property_readonly("as_bool", [](settings_t& self) {
             return Cast<bool>(self.shared_from_this());
