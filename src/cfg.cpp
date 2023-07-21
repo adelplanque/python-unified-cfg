@@ -58,13 +58,19 @@ public:
     SettingsValueIterator(settings_t::ptr settings) : SettingsIterator(settings)
     {}
 
-    settings_t::ptr next()
+    py::object next()
     {
         try {
             if (this->it.value() == this->end.value()) {
                 throw pybind11::stop_iteration();
             } else {
-                return (this->it.value()++)->second;
+                auto& value = this->it.value()->second;
+                ++this->it.value();
+                if (value->is_value()) {
+                    return py::str(value->as<std::string>());
+                } else {
+                    return py::cast(value);
+                }
             }
         }
         catch (std::bad_optional_access&) {
@@ -80,13 +86,20 @@ public:
     SettingsItemIterator(settings_t::ptr settings) : SettingsIterator(settings)
     {}
 
-    std::pair<const std::string&, settings_t::ptr> next()
+    py::object next()
     {
         try {
             if (this->it.value() == this->end.value()) {
                 throw pybind11::stop_iteration();
             } else {
-                return *(this->it.value()++);
+                auto& key = this->it.value()->first;
+                auto& value = this->it.value()->second;
+                ++this->it.value();
+                if (value->is_value()) {
+                    return py::make_tuple(key, value->as<std::string>());
+                } else {
+                    return py::make_tuple(key, value);
+                }
             }
         }
         catch (std::bad_optional_access&) {
@@ -175,12 +188,17 @@ PYBIND11_MODULE(_cfg, m) {
     py::class_<settings_t, settings_t::ptr>(m, "_settings")
         .def("__getattr__",
              [](settings_t::ptr& self, const std::string key) {
-                 auto value = self->at(key);
                  py::object o;
-                 if (value->is_value()) {
-                     o = py::str(value->as<std::string>());
-                 } else {
-                     o = py::cast(value);
+                 try {
+                     auto value = self->at(key);
+                     if (value->is_value()) {
+                         o = py::str(value->as<std::string>());
+                     } else {
+                         o = py::cast(value);
+                     }
+                 }
+                 catch (const std::out_of_range& e) {
+                     throw py::attribute_error(e.what());
                  }
                  return o;
              },
@@ -197,6 +215,23 @@ PYBIND11_MODULE(_cfg, m) {
         .def("items", [](settings_t& self) {
             return std::make_unique<SettingsItemIterator>(self.shared_from_this());
         })
+        .def("get",
+             [](settings_t::ptr& self, const std::string key, py::object def) {
+                 py::object o;
+                 try {
+                     auto value = self->at(key);
+                     if (value->is_value()) {
+                         o = py::str(value->as<std::string>());
+                     } else {
+                         o = py::cast(value);
+                     }
+                 }
+                 catch (const std::out_of_range& e) {
+                     o = def;
+                 }
+                 return o;
+             },
+             py::arg("key"), py::arg("default") = py::none())
         .def_property_readonly("as_int", [](settings_t& self) {
             return Cast<int>(self.shared_from_this());
         })
