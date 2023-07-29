@@ -19,7 +19,7 @@ class mock(object):
         for k, v in data.items():
             toks = k.split(".")
             if len(toks) < 3:
-                raise ValueError(f"Invalid key {k}")
+                raise ValueError("Invalid key %s" % k)
             if any(
                 x in files
                 for x in (
@@ -40,11 +40,11 @@ class mock(object):
         for filename, data in self._files.items():
             with (self._tmp_path / filename).open("w") as f:
                 for group, values in data.items():
-                    f.write("[%s]\n" % group)
+                    f.write(u"[%s]\n" % group)
                     for item in values.items():
-                        f.write("%s = %s\n" % item)
+                        f.write(u"%s = %s\n" % item)
         cfg.set_config_path([str(self._tmp_path)] + self._config_path)
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        shutil.rmtree(self._tmp_path)
+        shutil.rmtree(str(self._tmp_path))
         cfg.set_config_path(self._config_path)
