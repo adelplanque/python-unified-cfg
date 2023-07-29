@@ -48,3 +48,28 @@ class mock(object):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         shutil.rmtree(str(self._tmp_path))
         cfg.set_config_path(self._config_path)
+
+
+class mock_config_path(object):
+    """
+    Context manager to override configuration file paths when testing.
+    All cache will be cleared when entering and exiting the context manager.
+    """
+
+    def __init__(self, paths):
+        """
+        Init
+
+        Args:
+            - paths: List of paths to use in code controlled by this context
+                     manager.
+        """
+        self.paths = paths
+
+    def __enter__(self):
+        self._old_config_paths = cfg.get_config_path()
+        cfg.set_config_path([str(x) for x in self.paths])
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        cfg.set_config_path(self._old_config_paths)
