@@ -1,4 +1,8 @@
+#include <arpa/inet.h>
 #include <iomanip>
+#include <map>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <sstream>
 #include <string>
 
@@ -136,6 +140,75 @@ private:
 };
 
 
+/**
+ * Retourne l'adresse IP sous la forme "X.Y.Z.T" du hostname passé en argument
+ *
+ * La résolution effectuée est standard via getaddrinfo()
+ *
+ * @return chaine allouée (à libérer par g_free()) contenant l'adresse IP (NULL si pas trouvé)
+ */
+std::string get_ip_for_hostname(const std::string& hostname)
+{
+    struct addrinfo *info, *p;
+    std::string res;
+    if ((hostname == "127.0.0.1") || (hostname == "localhost")
+        || (hostname == "localhost.localdomain")) {
+        res = "127.0.0.1";
+    } else if ((getaddrinfo(hostname.c_str(), NULL, NULL, &info)) == 0) {
+        p = info;
+        while (p != NULL) {
+            if (p->ai_addr != NULL && p->ai_family == AF_INET) {
+                struct sockaddr_in *sock_in = (struct sockaddr_in *) p->ai_addr;
+                const char *tmp = inet_ntoa(sock_in->sin_addr);
+                if (tmp != NULL) {
+                    if (strcmp(tmp, "127.0.0.1") != 0) {
+                        res = tmp;
+                        break;
+                    } else {
+                        /*
+                         * si c'est 127.0.0.1, on prend mais on va essayer de trouver autre chose
+                         */
+                        if (res.empty()) {
+                            res = tmp;
+                        }
+                    }
+                }
+            }
+            p = p->ai_next;
+        }
+        freeaddrinfo(info);
+    }
+    return res;
+}
+
+
+class IpResolver
+{
+public:
+    IpResolver(settings_t::ptr settings) : settings(settings) {}
+
+    std::string& call(const std::string& key)
+    {
+        if (! IpResolver::cache.count(key)) {
+            try {
+                IpResolver::cache.emplace(key,
+                                          get_ip_for_hostname(settings->at(key)->as<std::string>()));
+            }
+            catch (const std::out_of_range& e) {
+                throw e;
+            }
+        }
+        return IpResolver::cache.at(key);
+    }
+
+private:
+    settings_t::ptr settings;
+    static std::map<std::string, std::string> cache;
+};
+
+std::map<std::string, std::string> IpResolver::cache = std::map<std::string, std::string>();
+
+
 void set_config_path(py::object paths)
 {
     config_t& cfg = config_t::get_instance();
@@ -175,6 +248,9 @@ PYBIND11_MODULE(_cfg, m) {
     py::class_<Cast<bool>>(m, "_cast_bool")
         .def("__call__", &Cast<bool>::call,
              py::arg("key"), py::arg("no_raise") = false, py::arg("failback") = py::none());
+
+    py::class_<IpResolver>(m, "_cast_ip")
+        .def("__call__", &IpResolver::call, py::arg("key"));
 
     py::class_<SettingsKeyIterator, std::unique_ptr<SettingsKeyIterator>>
         (m, "_settings_keys")
@@ -243,6 +319,9 @@ PYBIND11_MODULE(_cfg, m) {
         })
         .def_property_readonly("as_bool", [](settings_t& self) {
             return Cast<bool>(self.shared_from_this());
+        })
+        .def_property_readonly("as_ip", [](settings_t& self) {
+            return IpResolver(self.shared_from_this());
         });
 
     m.def("set_config_path", &set_config_path);
