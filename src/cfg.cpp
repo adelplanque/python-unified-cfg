@@ -115,13 +115,13 @@ class Cast
 public:
     Cast(settings_t::ptr settings) : settings(settings) {}
 
-    py::object call(const std::string& key, bool no_raise)
+    py::object call(const std::string& key, bool no_raise, py::object& failback)
     {
         try {
             return py::int_(settings->at(key)->as<T>());
         }
         catch (const std::out_of_range& e) {
-            if (no_raise) return py::none();
+            if (no_raise) return failback;
             else throw e;
         }
         catch (boost::bad_lexical_cast&) {
@@ -169,10 +169,12 @@ PYBIND11_MODULE(_cfg, m) {
     m.doc() = "";
 
     py::class_<Cast<long>>(m, "_cast_int")
-        .def("__call__", &Cast<long>::call, py::arg("key"), py::arg("no_raise") = false);
+        .def("__call__", &Cast<long>::call,
+             py::arg("key"), py::arg("no_raise") = false, py::arg("failback") = py::none());
 
     py::class_<Cast<bool>>(m, "_cast_bool")
-        .def("__call__", &Cast<bool>::call, py::arg("key"), py::arg("no_raise") = false);
+        .def("__call__", &Cast<bool>::call,
+             py::arg("key"), py::arg("no_raise") = false, py::arg("failback") = py::none());
 
     py::class_<SettingsKeyIterator, std::unique_ptr<SettingsKeyIterator>>
         (m, "_settings_keys")
