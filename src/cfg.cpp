@@ -268,23 +268,24 @@ PYBIND11_MODULE(_cfg, m) {
         .def("__next__", &SettingsItemIterator::next);
 
     py::class_<settings_t, settings_t::ptr>(m, "_settings")
-        .def("__getattr__",
-             [](settings_t::ptr& self, const std::string key) {
-                 py::object o;
-                 try {
-                     auto value = self->at(key);
-                     if (value->is_value()) {
-                         o = py::str(value->as<std::string>());
-                     } else {
-                         o = py::cast(value);
-                     }
-                 }
-                 catch (const std::out_of_range& e) {
-                     throw py::attribute_error(e.what());
-                 }
-                 return o;
-             },
-             py::arg("key"))
+        .def("__getattr__", [](settings_t& self, const std::string key) {
+            py::object o;
+            try {
+                auto value = self.at(key);
+                if (value->is_value()) {
+                    o = py::str(value->as<std::string>());
+                } else {
+                    o = py::cast(value);
+                }
+            }
+            catch (const std::out_of_range& e) {
+                throw py::attribute_error(e.what());
+            }
+            return o;
+        }, py::arg("key"))
+        .def("__contains__", [](settings_t& self, const std::string& key) {
+            return self.count(key) > 0;
+        }, py::arg("key"))
         .def("__iter__", [](settings_t& self) {
             return std::make_unique<SettingsKeyIterator>(self.shared_from_this());
         })
