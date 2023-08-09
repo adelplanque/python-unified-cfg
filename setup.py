@@ -49,7 +49,8 @@ _config_manager = Extension(
 )
 
 
-pkgconfig_configure(_config_manager, ["cfg",])
+if "sdist" not in sys.argv:
+    pkgconfig_configure(_config_manager, ["cfg",])
 
 
 setup(
