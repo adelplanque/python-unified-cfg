@@ -1,4 +1,5 @@
 import cfg
+import logging
 import shutil
 import sys
 import tempfile
@@ -7,6 +8,8 @@ if sys.version_info[0] == 2:
     import pathlib2 as pathlib
 else:
     import pathlib
+
+log = logging.getLogger("cfg-testing")
 
 
 class mock(object):
@@ -35,10 +38,12 @@ class mock(object):
 
     def __enter__(self):
         self._config_path = cfg.get_config_path()
-        print(self._config_path)
         self._tmp_path = pathlib.Path(tempfile.mkdtemp())
+        log.debug("Config paths: %s" % ":".join(cfg.get_config_path()))
         for filename, data in self._files.items():
-            with (self._tmp_path / filename).open("w") as f:
+            dst = self._tmp_path / filename
+            dst.parent.mkdir(exist_ok=True, parents=True)
+            with dst.open("w") as f:
                 for group, values in data.items():
                     f.write(u"[%s]\n" % group)
                     for item in values.items():
@@ -48,6 +53,7 @@ class mock(object):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         shutil.rmtree(str(self._tmp_path))
         cfg.set_config_path(self._config_path)
+        log.debug("Restaure config paths: %s" % ":".join(cfg.get_config_path()))
 
 
 class mock_config_path(object):
