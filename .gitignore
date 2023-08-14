@@ -1,6 +1,8 @@
 *.Po
 *.egg-info
+*.pyc
 *.so
 *~
 /build
 /dist
+__pycache__
