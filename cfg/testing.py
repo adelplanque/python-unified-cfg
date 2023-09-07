@@ -62,18 +62,24 @@ class mock_config_path(object):
     All cache will be cleared when entering and exiting the context manager.
     """
 
-    def __init__(self, paths):
+    def __init__(self, paths, override=True):
         """
         Init
 
         Args:
             - paths: List of paths to use in code controlled by this context
                      manager.
+            - override: If True, replace configuration paths with given paths,
+                        else prepend paths to config search paths.
         """
         self.paths = paths
+        self.override = override
 
     def __enter__(self):
         self._old_config_paths = cfg.get_config_path()
+        new_path = [str(x) for x in self.paths]
+        if not self.override:
+            new_path.extend(self._old_config_paths)
         cfg.set_config_path([str(x) for x in self.paths])
         return self
 
