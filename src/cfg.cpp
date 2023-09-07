@@ -189,16 +189,11 @@ public:
 
     std::string& call(const std::string& key)
     {
-        if (! IpResolver::cache.count(key)) {
-            try {
-                IpResolver::cache.emplace(key,
-                                          get_ip_for_hostname(settings->at(key)->as<std::string>()));
-            }
-            catch (const std::out_of_range& e) {
-                throw e;
-            }
+        auto hostname = settings->at(key)->as<std::string>();
+        if (! IpResolver::cache.count(hostname)) {
+            IpResolver::cache.emplace(hostname, get_ip_for_hostname(hostname));
         }
-        return IpResolver::cache.at(key);
+        return IpResolver::cache.at(hostname);
     }
 
 private:
